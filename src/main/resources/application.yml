@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/demopost
+    username: postgres
+    password: riju
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 10000
+        readTimeout: 10000
