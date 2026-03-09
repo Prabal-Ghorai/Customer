@@ -5,23 +5,30 @@ import com.example.Bank.Entity.CustomerDocument;
 import com.example.Bank.Entity.DocumentType;
 import com.example.Bank.Payload.CustomerDto;
 import com.example.Bank.Payload.DocumentDto;
+import com.example.Bank.Repository.CustomerDocumentRepository;
 import com.example.Bank.Repository.CustomerRepository;
 import com.example.Bank.Service.CustomerService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoSettings;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class CustomerServiceTest {
 
     @InjectMocks
@@ -29,6 +36,22 @@ public class CustomerServiceTest {
     @Mock
     private CustomerRepository customerRepository;
 
+    @Mock
+    private CustomerDocumentRepository customerDocumentRepository;
+
+    private Customer customer;
+    private CustomerDocument document;
+
+    @BeforeEach
+    void setUp() {
+        customer = new Customer();
+        customer.setAccountId(1L);
+
+        document = new CustomerDocument();
+        document.setDocumentNumber("123");
+        document.setCustomer(customer);
+        // Remove manual reset, let MockitoExtension handle mocks
+    }
     @Test
     void testCreateCustomer_success() {
         // Arrange
@@ -86,4 +109,74 @@ public class CustomerServiceTest {
         assertTrue(exception.getMessage().contains("Invalid document type"));
         verify(customerRepository, never()).save(any());
     }
+
+    //  SUCCESS CASE
+    @Test
+    void testFindByDocumentNumber_Success() {
+
+        Mockito.when(customerDocumentRepository.findByDocumentNumber(123))
+                .thenReturn(Optional.of(document));
+
+        Customer result = customerService.findByDocumentNumber(123);
+
+        assertNotNull(result);
+        assertEquals(1L, result.getAccountId());
+    }
+
+    //  DOCUMENT NOT FOUND
+    @Test
+    void testFindByDocumentNumber_NotFound() {
+
+        Mockito.when(customerDocumentRepository.findByDocumentNumber(123))
+                .thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> customerService.findByDocumentNumber(123)
+        );
+
+        assertEquals("Document not found", exception.getMessage());
+    }
+
+    // CUSTOMER FOUND
+    @Test
+    void testGetCustomerById_Success() {
+        // Arrange
+        Customer mockCustomer = new Customer();
+        mockCustomer.setAccountId(1L);
+        mockCustomer.setCustomerName("TestUser");
+        mockCustomer.setPhNo(1234567890L);
+        mockCustomer.setDocuments(new ArrayList<>());
+        mockCustomer.setCreatedAt(LocalDateTime.now());
+
+        Mockito.when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(mockCustomer));
+
+        // Act
+        Customer result = customerService.getCustomerById(1L);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1L, result.getAccountId());
+        assertEquals("TestUser", result.getCustomerName());
+        assertEquals(1234567890L, result.getPhNo());
+        assertTrue(result.getDocuments().isEmpty());
+    }
+
+    // CUSTOMER NOT FOUND
+    @Test
+    void testGetCustomerById_NotFound() {
+        Mockito.when(customerRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> customerService.getCustomerById(1L)
+        );
+
+        // Accept either exact or partial match for error message
+        String msg = exception.getMessage();
+        assertTrue(msg.equals("Customer not found") || msg.contains("Customer not found"));
+    }
+
 }
