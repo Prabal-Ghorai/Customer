@@ -79,7 +79,8 @@ public class CustomerService {
 
     public Customer getCustomerById(Long id) {
         try {
-            return customerRepository.findById(id)
+            // Use id.longValue() to match repository signature
+            return customerRepository.findById(id.longValue())
                     .orElseThrow(() -> {
                         logger.error("Customer not found with ID: {}", id);
                         return new RuntimeException("Customer not found");
